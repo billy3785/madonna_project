@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+
+# Ignore virtual environment
+venv/
+.env
+
+# Ignore data & logs
+data/raw/
+data/embeddings/
+logs/
+
+# Ignore Docker volumes
+docker/mariadb_data/
+docker/chroma_data/
