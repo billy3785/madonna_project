@@ -1,0 +1,1 @@
+ls -l ~/madonna_project/backend/Dockerfile
