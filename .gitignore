@@ -1,15 +1,27 @@
 __pycache__/
 *.pyc
 
-# Ignore virtual environment
+# Virtual Environment
 venv/
 .env
 
-# Ignore data & logs
+# Ignore data files
 data/raw/
+data/processed/
 data/embeddings/
 logs/
 
 # Ignore Docker volumes
 docker/mariadb_data/
 docker/chroma_data/
+
+# Node.js dependencies (Frontend)
+frontend/node_modules/
+frontend/.next/
+
+# Jupyter Notebooks
+notebooks/.ipynb_checkpoints/
+
+# VS Code settings
+.vscode/
+.env
