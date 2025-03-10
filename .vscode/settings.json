@@ -1,0 +1,12 @@
+{
+    "editor.formatOnSave": true,
+    "python.formatting.provider": "black",
+    "editor.tabSize": 4,
+    "files.exclude": {
+      "**/__pycache__": true,
+      "**/.DS_Store": true,
+      "**/.git": true,
+      "**/node_modules": true
+    },
+    "terminal.integrated.defaultProfile.osx": "zsh"
+  }
