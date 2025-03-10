@@ -25,3 +25,4 @@ notebooks/.ipynb_checkpoints/
 # VS Code settings
 .vscode/
 .env
+.env
