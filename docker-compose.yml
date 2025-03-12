@@ -1,1 +1,49 @@
-/Users/billy/madonna_project/docker/docker-compose.yml
+services:
+  fastapi:
+    build: ./backend
+    container_name: madonna_fastapi
+    restart: always
+    depends_on:
+      - mariadb
+      - chromadb
+    environment:
+      DATABASE_URL: "mysql://billy:MadonnA816!!@@@mariadb/madonna_archive"
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - ./scripts:/app/scripts
+
+  mariadb:
+    image: mariadb:latest
+    container_name: madonna_mariadb
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: "MadonnA816!!@@"
+      MYSQL_DATABASE: madonna_archive
+      MYSQL_USER: billy
+      MYSQL_PASSWORD: "MadonnA816!!@@"
+    volumes:
+      - madonna_project_mariadb_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+
+  chromadb:
+    image: chromadb/chroma
+    container_name: madonna_chromadb
+    restart: always
+    volumes:
+      - madonna_project_chroma_data:/chroma/.chroma
+    ports:
+      - "8001:8001"
+
+  adminer:
+    image: adminer
+    container_name: madonna_adminer
+    restart: always
+    ports:
+      - "8080:8080"
+
+volumes:
+  madonna_project_mariadb_data:
+  madonna_project_chroma_data:
