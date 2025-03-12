@@ -1,6 +1,6 @@
 import requests
 import json
-import mysql.connector
+import pymysql
 
 # Discogs API Credentials
 DISCOGS_API_KEY = "WfUBmwNEQzcphKBIpZGP"
@@ -8,11 +8,12 @@ DISCOGS_SECRET = "rFTxnlgwwuxPfFLPudsGYWVwvrHznHwA"
 ARTIST_ID = 8760  # Madonna's Discogs ID
 
 # MariaDB Connection
-db = mysql.connector.connect(
+db = pymysql.connect(
     host="madonna_mariadb",
-    user="root",
+    user="billy",
     password="MadonnA816!!@@",
-    database="madonna_db"
+    database="madonna_archive",
+    cursorclass=pymysql.cursors.DictCursor
 )
 cursor = db.cursor()
 

@@ -1,83 +1,86 @@
 import requests
-import mysql.connector
+import pymysql
 
-# Setlist.fm API Credentials
-SETLIST_API_KEY = "rW4Z_ERv3kVKUWMp9QvekOZo-_ikff4iCWQy"
-ARTIST_MBID = "79239441-bfd5-4981-a70c-55c3f15c1287"
+# ✅ Setlist.fm API details
+MBID = "79239441-bfd5-4981-a70c-55c3f15c1287"
+base_url = f"https://api.setlist.fm/rest/1.0/artist/{MBID}/setlists"
+headers = {
+    "Accept": "application/json",
+    "x-api-key": "rW4Z_ERv3kVKUWMp9QvekOZo-_ikff4iCWQy",
+    "User-Agent": "MadonnaProject/1.0"
+}
 
-# MariaDB Connection (replace YOUR_DB_PASSWORD!)
-db = mysql.connector.connect(
-    host="127.0.0.1",  # or "localhost" if running locally
-    port=3306,
-    user="root",
-    password="MadonnA816!!@@",  # <-- Put your actual DB password here
-    database="madonna_db"
+# ✅ Database connection using pymysql
+db = pymysql.connect(
+    host="madonna_mariadb",
+    user="billy",
+    password="MadonnA816!!@@",
+    database="madonna_archive",
+    cursorclass=pymysql.cursors.DictCursor
 )
 cursor = db.cursor()
 
-# Setlist.fm endpoint for Madonna setlists
-url = f"https://api.setlist.fm/rest/1.0/artist/{ARTIST_MBID}/setlists?p=1"
-headers = {
-    "x-api-key": SETLIST_API_KEY,
-    "Accept": "application/json"
-}
+# ✅ Insert setlist data safely into the database
+def insert_setlist(date, venue, city, country, tour_name, songs):
+    try:
+        cursor.execute("""
+            INSERT INTO setlists (event_date, venue, city, country, tour_name)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (date, venue, city, country, tour_name))
 
-response = requests.get(url, headers=headers)
-if response.status_code != 200:
-    print(f"Failed to retrieve setlists: {response.status_code}")
-    exit()
+        setlist_id = cursor.lastrowid
 
-data = response.json()
-
-# Insert setlists into MariaDB
-for setlist in data.get("setlist", []):
-    venue_name = setlist["venue"]["name"]
-    city = setlist["venue"]["city"]["name"]
-    country = setlist["venue"]["city"]["country"]["code"]
-    event_date = setlist["eventDate"]  # format DD-MM-YYYY, we'll need to convert it to YYYY-MM-DD
-    
-    # Convert date
-    event_date_converted = '-'.join(reversed(event_date.split('-')))
-
-    # Insert venue (avoid duplicates)
-    cursor.execute("""
-        INSERT INTO venues (name, city, country) 
-        VALUES (%s, %s, %s) 
-        ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id)
-    """, (venue_name, city, country))
-    venue_id = cursor.lastrowid
-
-    # Insert setlist entry
-    cursor.execute("""
-        INSERT INTO setlists (venue_id, event_date) 
-        VALUES (%s, %s)
-    """, (venue_id, event_date_converted))
-    setlist_id = cursor.lastrowid
-
-    # Insert songs into setlist_songs
-    songs = setlist.get("sets", {}).get("set", [])
-    position = 1
-    for song_set in songs:
-        for song in song_set.get("song", []):
-            song_name = song["name"]
-
-            # Insert song if it doesn't exist
+        for song in songs:
             cursor.execute("""
-                INSERT INTO songs (title) 
-                VALUES (%s) 
-                ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id)
-            """, (song_name,))
+                INSERT INTO songs (title) VALUES (%s)
+                ON DUPLICATE KEY UPDATE title=title
+            """, (song,))
             song_id = cursor.lastrowid
 
-            # Associate song with setlist
             cursor.execute("""
-                INSERT INTO setlist_songs (setlist_id, song_id, position) 
-                VALUES (%s, %s, %s)
-            """, (setlist_id, song_id, position))
-            position += 1
+                INSERT INTO setlist_songs (setlist_id, song_id)
+                VALUES (%s, %s)
+            """, (setlist_id, cursor.lastrowid))
 
-    db.commit()
+        db.commit()
+    except Exception as e:
+        print(f"❌ Error inserting setlist: {e}")
+        db.rollback()
 
-print("✅ Setlists and songs successfully imported!")
-cursor.close()
-db.close()
+# ✅ Fetch setlists with pagination and error handling
+def fetch_and_store_setlists():
+    page = 1
+    while True:
+        params = {"p": page}
+        response = requests.get(base_url, headers=headers, params=params)
+
+        if response.status_code != 200:
+            print(f"❌ API Error: {response.status_code}")
+            break
+
+        data = response.json()
+        setlists = data.get("setlist", [])
+
+        if not setlists:
+            print("🔍 No further setlists found.")
+            break
+
+        for setlist in setlists:
+            date = setlist.get('eventDate')
+            venue = setlist.get('venue', {}).get('name')
+            city = setlist.get('venue', {}).get('city', {}).get('name')
+            country = setlist.get('venue', {}).get('city', {}).get('country', {}).get('name')
+            tour_name = setlist.get('tour', {}).get('name')
+            songs = [s.get('name') for s in setlist.get('sets', {}).get('set', [])[0].get('song', [])]
+
+            insert_setlist(date, venue, city, country, tour_name, songs)
+
+        print(f"➡️ Page {page} processed successfully.")
+        page += 1
+
+# ✅ Run the script
+if __name__ == "__main__":
+    print("🚀 Starting Setlist.fm fetch script...")
+    fetch_and_store_setlists()
+    db.close()
+    print("✅ Setlist fetch and storage completed.")
